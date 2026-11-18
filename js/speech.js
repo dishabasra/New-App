@@ -5,22 +5,27 @@ const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 export const canListen = Boolean(Recognition);
 export const canSpeak = "speechSynthesis" in window;
 
-let voices = [];
+let allVoices = [];
 function loadVoices() {
   if (!canSpeak) return;
-  voices = speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith("en"));
+  allVoices = speechSynthesis.getVoices();
 }
 if (canSpeak) {
   loadVoices();
   speechSynthesis.addEventListener?.("voiceschanged", loadVoices);
 }
 
-export function englishVoices() {
-  return voices;
+// Voices for a language code like "es-ES". Prefer the exact region, then any region.
+export function voicesFor(lang) {
+  const base = lang.slice(0, 2).toLowerCase();
+  const all = allVoices.filter((v) => v.lang.toLowerCase().replace("_", "-").startsWith(base));
+  const exact = all.filter((v) => v.lang.replace("_", "-").toLowerCase() === lang.toLowerCase());
+  return exact.length ? [...exact, ...all.filter((v) => !exact.includes(v))] : all;
 }
 
 // Pick a stable voice per character so each one sounds different.
-function voiceFor(seed, preferredURI) {
+function voiceFor(seed, preferredURI, lang) {
+  const voices = voicesFor(lang);
   if (preferredURI) {
     const v = voices.find((x) => x.voiceURI === preferredURI);
     if (v) return v;
@@ -31,16 +36,16 @@ function voiceFor(seed, preferredURI) {
   return voices[h % voices.length];
 }
 
-export function speak(text, { seed = "", pitch = 1, rate = 1, voiceURI = null, speed = 1 } = {}) {
+export function speak(text, { lang = "en-US", seed = "", pitch = 1, rate = 1, voiceURI = null, speed = 1 } = {}) {
   return new Promise((resolve) => {
     if (!canSpeak) return resolve();
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text.replace(/\(.*?\)\s*/g, ""));
-    const v = voiceFor(seed, voiceURI);
+    const v = voiceFor(seed, voiceURI, lang);
     if (v) u.voice = v;
-    u.lang = v?.lang || "en-US";
+    u.lang = v?.lang || lang;
     u.pitch = pitch;
-    u.rate = rate * speed;
+    u.rate = Math.max(0.5, rate * (speed || 1));
     u.onend = resolve;
     u.onerror = resolve;
     speechSynthesis.speak(u);

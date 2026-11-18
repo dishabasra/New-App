@@ -1,5 +1,5 @@
 // Offline support: cache the app shell, serve it cache-first, refresh in the background.
-const CACHE = "talktown-v1";
+const CACHE = "talktown-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -9,6 +9,11 @@ const ASSETS = [
   "./js/scenes.js",
   "./js/match.js",
   "./js/speech.js",
+  "./js/content.js",
+  "./js/characters.js",
+  "./js/art.js",
+  "./js/lang/es.js",
+  "./js/lang/fr.js",
   "./icons/icon.svg",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

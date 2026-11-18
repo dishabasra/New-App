@@ -3,9 +3,11 @@
 export function normalize(text) {
   return text
     .toLowerCase()
-    .replace(/[’‘]/g, "'")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // é -> e, ñ -> n, ç -> c
+    .replace(/œ/g, "oe")
     .replace(/wi-?fi/g, "wifi")
-    .replace(/[^a-z0-9' ]+/g, " ")
+    .replace(/[^a-z0-9 ]+/g, " ") // apostrophes and hyphens split words: j'ai -> j ai
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -54,14 +56,16 @@ export function pronunciation(target, heard) {
   const pool = new Map();
   for (const w of heardWords) pool.set(w, (pool.get(w) || 0) + 1);
   const parts = target.split(/\s+/).map((raw) => {
-    const w = normalize(raw);
-    if (!w) return { word: raw, ok: true };
-    const loose = [...pool.keys()].find((h) => pool.get(h) > 0 && (h === w || closeEnough(h, w)));
-    if (loose) {
-      pool.set(loose, pool.get(loose) - 1);
-      return { word: raw, ok: true };
+    const subs = words(raw);
+    if (!subs.length) return { word: raw, ok: true };
+    // "j'aimerais" is two words once normalised; every part has to be heard.
+    let ok = true;
+    for (const w of subs) {
+      const loose = [...pool.keys()].find((h) => pool.get(h) > 0 && (h === w || closeEnough(h, w)));
+      if (loose) pool.set(loose, pool.get(loose) - 1);
+      else ok = false;
     }
-    return { word: raw, ok: false };
+    return { word: raw, ok };
   });
   const scored = parts.filter((p) => normalize(p.word));
   const ok = scored.filter((p) => p.ok).length;
