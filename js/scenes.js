@@ -9,11 +9,15 @@
 //   any      node to go to when the learner says anything else (open questions)
 //   end      true when the conversation is complete
 //
+// Scene `objectives` form the mission checklist: each is ticked once the
+// conversation reaches any node listed in `reach`.
+//
 // `{name}` in an npc line is replaced with the learner's name.
 
 export const SCENES = [
   {
     id: "cafe",
+    objectives: [{"label": "Order a drink", "reach": ["size"]}, {"label": "Choose your size", "reach": ["snack"]}, {"label": "Add a snack (or not)", "reach": ["here"]}, {"label": "Pay for your order", "reach": ["bye"]}],
     name: "Bean There Café",
     emoji: "☕",
     color: "#f59e0b",
@@ -88,6 +92,7 @@ export const SCENES = [
   },
   {
     id: "market",
+    objectives: [{"label": "Ask about the fruit", "reach": ["apples", "berries"]}, {"label": "Say how much you want", "reach": ["deal"]}, {"label": "Haggle or pay", "reach": ["pay"]}],
     name: "Sunday Market",
     emoji: "🍎",
     color: "#22c55e",
@@ -151,6 +156,7 @@ export const SCENES = [
   },
   {
     id: "taxi",
+    objectives: [{"label": "Say where you're going", "reach": ["time"]}, {"label": "Chat with the driver", "reach": ["tip"]}, {"label": "Pay the fare", "reach": ["bye"]}],
     name: "Yellow Cab",
     emoji: "🚕",
     color: "#eab308",
@@ -212,6 +218,7 @@ export const SCENES = [
   },
   {
     id: "restaurant",
+    objectives: [{"label": "Get a table", "reach": ["seat"]}, {"label": "Order your meal", "reach": ["allergy"]}, {"label": "Fix the wrong order", "reach": ["fix"]}, {"label": "Ask for the bill", "reach": ["bye"]}],
     name: "Luna Bistro",
     emoji: "🍝",
     color: "#ef4444",
@@ -289,6 +296,7 @@ export const SCENES = [
   },
   {
     id: "hotel",
+    objectives: [{"label": "Check in", "reach": ["room"]}, {"label": "Ask about the hotel", "reach": ["problem"]}, {"label": "Report a problem", "reach": ["fixit"]}, {"label": "Wrap up the call", "reach": ["bye"]}],
     name: "Grand Hotel",
     emoji: "🏨",
     color: "#8b5cf6",
@@ -362,6 +370,7 @@ export const SCENES = [
   },
   {
     id: "doctor",
+    objectives: [{"label": "Describe your symptoms", "reach": ["fever"]}, {"label": "Answer the doctor", "reach": ["check"]}, {"label": "Ask about the medicine", "reach": ["often"]}, {"label": "Thank the doctor", "reach": ["bye"]}],
     name: "City Clinic",
     emoji: "🏥",
     color: "#06b6d4",
@@ -417,6 +426,7 @@ export const SCENES = [
   },
   {
     id: "airport",
+    objectives: [{"label": "Say where you're flying", "reach": ["bags"]}, {"label": "Check bags and pick a seat", "reach": ["delay"]}, {"label": "Handle the delay", "reach": ["gate"]}],
     name: "Skyport Airport",
     emoji: "✈️",
     color: "#3b82f6",
@@ -479,6 +489,7 @@ export const SCENES = [
   },
   {
     id: "office",
+    objectives: [{"label": "Introduce yourself", "reach": ["strength"]}, {"label": "Talk about strengths and weaknesses", "reach": ["why"]}, {"label": "Say why you want the job", "reach": ["questions"]}, {"label": "Ask a question", "reach": ["answer"]}],
     name: "Startup HQ",
     emoji: "💼",
     color: "#ec4899",
@@ -537,6 +548,7 @@ export const SCENES = [
   },
   {
     id: "party",
+    objectives: [{"label": "Introduce yourself", "reach": ["host"]}, {"label": "Make small talk", "reach": ["hobby"]}, {"label": "Make plans to meet again", "reach": ["bye"]}],
     name: "Rooftop Party",
     emoji: "🎉",
     color: "#f97316",

@@ -1,8 +1,7 @@
 import { getScenes, LANGS } from "./content.js";
 import { bestReply, pronunciation } from "./match.js";
 import { speak, stopSpeaking, listen, canListen, canSpeak, voicesFor } from "./speech.js";
-import { character } from "./characters.js";
-import { backdrop, building, flag } from "./art.js";
+import { building, flag } from "./art.js";
 
 // ---------- state ----------
 
@@ -24,7 +23,7 @@ const defaults = () => ({
   voice: {},
   speed: 1,
   autoListen: true,
-  showTr: false,
+  hideTr: false,
 });
 
 function load() {
@@ -89,6 +88,7 @@ const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const fill = (s) => String(s ?? "").replaceAll("{name}", state.name || "friend");
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const pic = (id, thumb) => `img/${id}${thumb ? "-thumb" : ""}.webp`;
 const levelFromXp = (xp) => Math.floor(Math.sqrt(xp / 25)) + 1;
 const totalXp = () => Object.values(state.progress).reduce((a, p) => a + p.xp, 0);
 
@@ -203,17 +203,17 @@ function welcome() {
   app.innerHTML = `
   <section class="welcome">
     <div class="hero">
-      <div class="hero-bg">${backdrop("party")}</div>
-      <div class="hero-cast">
-        <div class="cast c1">${character("cafe", { id: "w1" })}</div>
-        <div class="cast c2">${character("airport", { id: "w2" })}</div>
-        <div class="cast c3">${character("market", { id: "w3" })}</div>
+      <img class="hero-img" src="${pic("welcome")}" alt="Three friendly characters on a sunny city street" />
+      <div class="hero-title">
+        <p class="brand">TalkTown</p>
+        <h1>Talk your way<br/>through <span>the city.</span></h1>
       </div>
-      <div class="hero-bubble">${esc(LANGS[lang].hello)}</div>
+      <div class="hero-bubble b1">¡Hola! <small>Hi!</small></div>
+      <div class="hero-bubble b2">Bonjour ! <small>Hello!</small></div>
+      <div class="hero-bubble b3" id="heroHello">${esc(LANGS[lang].hello)}</div>
     </div>
     <div class="welcome-body">
-      <h1>TalkTown</h1>
-      <p class="lead">Walk into a café, a market or a job interview and <b>speak</b>. Real conversations, out loud, with instant feedback.</p>
+      <p class="lead">Order coffee, haggle at the market, ace a job interview. Real conversations, out loud, with characters who answer back.</p>
       <form id="start" class="card">
         <fieldset class="fs">
           <legend>I want to speak</legend>
@@ -249,10 +249,11 @@ function welcome() {
   app.querySelectorAll('input[name="lang"]').forEach((r) =>
     r.addEventListener("change", () => {
       lang = r.value;
-      $(".hero-bubble").textContent = LANGS[lang].hello;
-      $(".hero-bubble").classList.remove("pop");
-      void $(".hero-bubble").offsetWidth;
-      $(".hero-bubble").classList.add("pop");
+      const b = $("#heroHello");
+      b.textContent = LANGS[lang].hello;
+      b.classList.remove("pop");
+      void b.offsetWidth;
+      b.classList.add("pop");
     })
   );
   $("#start").onsubmit = (e) => {
@@ -295,7 +296,7 @@ function city() {
     ${
       cont
         ? `<button class="continue" data-go="scene" data-arg="${cont.id}" style="--c:${cont.color}">
-        <div class="continue-art">${backdrop(cont.id)}<div class="continue-char">${character(cont.id, { id: "cont" })}</div></div>
+        <div class="continue-art"><img src="${pic(cont.id)}" alt="" /><span class="continue-tag">${cont.emoji} ${esc(cont.npc.name)} is waiting</span></div>
         <div class="continue-body">
           <p class="eyebrow">${p.completed[cont.id] ? "Practise again" : "Up next"} · ${cont.level}</p>
           <h3>${cont.emoji} ${esc(cont.name)}</h3>
@@ -323,7 +324,7 @@ function city() {
           return `
         <button class="place ${locked ? "locked" : ""} ${cont?.id === s.id ? "next" : ""}" role="listitem" style="left:${s.pos.x}%;top:${s.pos.y}%;--c:${s.color}"
           ${locked ? `data-locked="${s.unlock}"` : `data-go="scene" data-arg="${s.id}"`} aria-label="${esc(s.name)}${locked ? ", locked" : ""}">
-          ${cont?.id === s.id ? `<span class="you">${character(s.id, { id: "pin" + s.id })}</span>` : ""}
+          ${cont?.id === s.id ? `<span class="you"><img src="${pic(s.id, true)}" alt="" /></span>` : ""}
           ${building(s.id, s.color, locked)}
           <span class="label">${locked ? "🔒 " : s.emoji + " "}${esc(s.name)}</span>
           ${done ? `<span class="stars">${"★".repeat(done.stars)}<i>${"★".repeat(3 - done.stars)}</i></span>` : ""}
@@ -341,7 +342,7 @@ function city() {
           const done = p.completed[s.id];
           return `
         <button class="pcard ${locked ? "locked" : ""}" style="--c:${s.color}" ${locked ? `data-locked="${s.unlock}"` : `data-go="scene" data-arg="${s.id}"`}>
-          <div class="pcard-art">${backdrop(s.id)}<div class="pcard-char">${character(s.id, { id: "pc" + s.id })}</div>${locked ? `<div class="lock">🔒<small>${s.unlock} XP</small></div>` : ""}</div>
+          <div class="pcard-art"><img src="${pic(s.id, true)}" alt="" loading="lazy" />${locked ? `<div class="lock">🔒<small>${s.unlock} XP</small></div>` : ""}</div>
           <div class="pcard-body"><b>${esc(s.name)}</b><small>${esc(s.npc.name)} · ${esc(s.npc.role)}</small>
           <span class="pcard-meta"><em class="lvl lvl-${s.level}">${s.level}</em>${done ? `<span class="stars">${"★".repeat(done.stars)}<i>${"★".repeat(3 - done.stars)}</i></span>` : ""}</span></div>
         </button>`;
@@ -364,28 +365,11 @@ const RETRY = {
   fr: [["Pardon, je n'ai pas bien compris. Vous pouvez le dire autrement ?", "Sorry, I didn't quite understand. Can you say it another way?"], ["Hmm, essayez une des idées ci-dessous !", "Hmm, try one of the ideas below!"]],
 };
 
-function shortestPath(s) {
-  const seen = new Set([s.start]);
-  let frontier = [s.start];
-  for (let d = 0; d < 20; d++) {
-    const nxt = [];
-    for (const id of frontier) {
-      const n = s.nodes[id];
-      if (n.end) return d;
-      for (const t of [...(n.replies || []).map((r) => r.next), n.any].filter(Boolean))
-        if (!seen.has(t)) seen.add(t), nxt.push(t);
-    }
-    frontier = nxt;
-  }
-  return 6;
-}
-
 function scene(id) {
   const s = scenes().find((x) => x.id === id);
   if (!s) return go("city");
   const lang = state.lang;
   const isEn = lang === "en";
-  const steps = shortestPath(s);
   let nodeId = s.start;
   let earned = 0, turns = 0, hintsUsed = 0, misses = 0;
   const accuracies = [];
@@ -395,23 +379,28 @@ function scene(id) {
     alive = false;
     listening?.stop();
   };
+  let firstFold;
 
+  const visited = new Set([s.start]);
   app.innerHTML = `
-  <div class="convo" style="--c:${s.color}">
+  <div class="convo" id="stage" style="--c:${s.color}">
+    <div class="scene-photo"><img src="${pic(s.id)}" alt="${esc(s.npc.name)}, ${esc(s.npc.role)}, at ${esc(s.name)}" /></div>
+    <div class="scene-shade"></div>
     <header class="scenebar">
-      <button class="icon-btn" data-go="city" aria-label="Back to city">✕</button>
-      <div class="progress"><i id="prog" style="width:0%"></i></div>
+      <button class="glass-btn" data-go="city" aria-label="Back to city">✕</button>
+      <button class="mission-pill" id="missionToggle" aria-expanded="true" aria-controls="mission">
+        <span>🎯 Your mission</span><b id="missionCount">0/${s.objectives.length}</b>
+      </button>
       <div class="xp-chip">⚡<b id="earned">0</b></div>
     </header>
-    <section class="stage" id="stage">
-      <div class="stage-bg">${backdrop(s.id)}</div>
-      <div class="stage-char" id="char">${character(s.id, { id: "stage" })}</div>
-      <div class="nameplate"><b>${esc(s.npc.name)}</b><small>${esc(s.npc.role)} · ${esc(s.name)}</small></div>
-      <button class="mission-chip" id="mission" aria-label="Show mission">🎯 Mission</button>
+    <section class="mission" id="mission">
+      <p class="mission-place">${s.emoji} ${esc(s.name).toUpperCase()}</p>
+      <ul id="objectives"></ul>
+      <div class="progress"><i id="prog" style="width:0%"></i></div>
     </section>
-    <main class="chat" id="chat" aria-live="polite">
-      <div class="mission-card">🎯 <b>Your mission:</b> ${esc(s.goal)}</div>
-    </main>
+    <div class="scene-spacer"></div>
+    <div class="nameplate"><span class="np-dot"></span><b>${esc(s.npc.name)}</b><small>${esc(s.npc.role)}</small><span class="bars"><i></i><i></i><i></i><i></i></span></div>
+    <main class="chat" id="chat" aria-live="polite"></main>
     <footer class="composer" id="composer">
       <div class="hints" id="hints"></div>
       <div class="live" id="live"></div>
@@ -432,7 +421,40 @@ function scene(id) {
   const mic = $("#mic");
   const npcVoice = { seed: s.npc.name, pitch: s.npc.pitch, rate: s.npc.rate };
 
-  $("#mission").onclick = () => toast("🎯 " + s.goal);
+  const missionEl = $("#mission");
+  $("#missionToggle").onclick = () => {
+    const open = missionEl.classList.toggle("collapsed") === false;
+    $("#missionToggle").setAttribute("aria-expanded", open);
+  };
+
+  function renderObjectives(fresh) {
+    let done = 0;
+    $("#objectives").innerHTML = s.objectives
+      .map((o) => {
+        const ok = o.reach.some((r) => visited.has(r));
+        if (ok) done++;
+        return `<li class="${ok ? "done" : ""} ${ok && fresh?.includes(o) ? "just" : ""}"><i></i>${esc(o.label)}</li>`;
+      })
+      .join("");
+    $("#missionCount").textContent = `${done}/${s.objectives.length}`;
+    $("#prog").style.width = (done / s.objectives.length) * 100 + "%";
+  }
+  renderObjectives();
+  firstFold = setTimeout(() => alive && missionEl.classList.add("collapsed"), 4500);
+
+  function reach(id) {
+    const before = s.objectives.filter((o) => o.reach.some((r) => visited.has(r)));
+    visited.add(id);
+    const fresh = s.objectives.filter((o) => !before.includes(o) && o.reach.some((r) => visited.has(r)));
+    renderObjectives(fresh);
+    if (fresh.length) {
+      clearTimeout(firstFold);
+      missionEl.classList.remove("collapsed");
+      clearTimeout(reach.t);
+      reach.t = setTimeout(() => alive && missionEl.classList.add("collapsed"), 2200);
+      toast("✅ " + fresh.map((o) => o.label).join(" · "));
+    }
+  }
 
   function react(emoji, mood) {
     const r = document.createElement("div");
@@ -477,11 +499,11 @@ function scene(id) {
       "npc",
       `<div class="bub">
         <p lang="${lang}">${esc(line)}</p>
-        ${!isEn && en ? `<p class="tr ${state.showTr ? "show" : ""}">${esc(fill(en))}</p>` : ""}
+        ${!isEn && en ? `<p class="tr ${state.hideTr ? "" : "show"}">${esc(fill(en))}</p>` : ""}
         <div class="msg-tools">
           <button class="chip" data-act="replay" aria-label="Replay">🔊</button>
           <button class="chip" data-act="slow" aria-label="Slow">🐢</button>
-          ${!isEn && en ? `<button class="chip" data-act="tr">🌐 Translate</button>` : ""}
+          ${!isEn && en ? `<button class="chip" data-act="tr">🌐</button>` : ""}
         </div>
         ${tip ? `<p class="tip">💡 ${esc(tip)}</p>` : ""}
       </div>`
@@ -588,10 +610,10 @@ function scene(id) {
       turns++;
       addXp(xp);
       $("#earned").textContent = earned;
-      $("#prog").style.width = Math.min(100, (turns / steps) * 100) + "%";
       floatXp(me, xp);
       react(["👍", "😄", "👌", "✨"][turns % 4], "happy");
       nodeId = nextId;
+      reach(nextId);
       await wait(500);
       if (alive) showNode();
     } else {
@@ -660,8 +682,8 @@ function scene(id) {
     p.completed[s.id] = { stars: Math.max(stars, prev?.stars || 0), runs: (prev?.runs || 0) + 1 };
     save();
     const unlocked = scenes().filter((x) => x.unlock > before && x.unlock <= p.xp);
-    $("#prog").style.width = "100%";
     stage.classList.add("happy", "done");
+    missionEl.classList.remove("collapsed");
 
     $("#composer").innerHTML = `
       <div class="result">
@@ -706,7 +728,7 @@ function phrasebook() {
              </div>`
              )
              .join("")}</div>`
-        : `<div class="empty card"><div class="empty-art">${character("restaurant", { id: "empty" })}</div><h3>No phrases yet</h3><p class="small">Tap ☆ next to any phrase in a conversation and it lands here.</p><button class="btn primary" data-go="city">Find a conversation</button></div>`
+        : `<div class="empty card"><img class="empty-art" src="${pic("restaurant", true)}" alt="" /><h3>No phrases yet</h3><p class="small">Tap ☆ next to any phrase in a conversation and it lands here.</p><button class="btn primary" data-go="city">Find a conversation</button></div>`
     }
   </main>
   ${nav("phrasebook")}`;
@@ -744,7 +766,7 @@ function drill() {
       addXp(xp);
       page.innerHTML = `
         <div class="result card">
-          <div class="empty-art">${character(avg >= 80 ? "party" : "office", { id: "dr" })}</div>
+          <img class="empty-art" src="${pic(avg >= 80 ? "party" : "office", true)}" alt="" />
           <h3>${avg >= 80 ? "Superstar!" : "Nice effort!"} ${avg}% average</h3>
           <p class="small">+${xp} XP</p>
           <div class="result-actions"><button class="btn" data-go="drill">Another round</button><button class="btn primary" data-go="city">City</button></div>
@@ -876,7 +898,7 @@ function profile() {
           : state.lang !== "en" ? `<p class="small">No ${L().name} voice is installed on this device, so lines may be read with an accent. Add one in your system's language settings.</p>` : ""
       }
       ${canListen ? `<label class="check"><input type="checkbox" id="auto" ${state.autoListen ? "checked" : ""}/> Listen automatically after each line</label>` : ""}
-      <label class="check"><input type="checkbox" id="tr" ${state.showTr ? "checked" : ""}/> Always show English translations</label>
+      <label class="check"><input type="checkbox" id="tr" ${state.hideTr ? "" : "checked"}/> Show English translations</label>
       <button class="btn danger" id="reset">Reset all progress</button>
     </div>
     <p class="small center">TalkTown is free. Everything stays on this device.${canSpeak ? "" : "<br/>Text-to-speech isn't available in this browser."}</p>
@@ -895,7 +917,7 @@ function profile() {
   $("#speed").onchange = (e) => ((state.speed = +e.target.value), save());
   $("#voice")?.addEventListener("change", (e) => ((state.voice[state.lang] = e.target.value), save()));
   $("#auto")?.addEventListener("change", (e) => ((state.autoListen = e.target.checked), save()));
-  $("#tr").onchange = (e) => ((state.showTr = e.target.checked), save());
+  $("#tr").onchange = (e) => ((state.hideTr = !e.target.checked), save());
   $("#reset").onclick = () => {
     if (confirm("Delete all your progress in every language? This can't be undone.")) {
       state = defaults();
