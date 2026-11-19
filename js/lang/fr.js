@@ -190,7 +190,7 @@ export default {
     },
   },
   office: {
-    name: "Bureau Startup", npc: "Julien",
+    name: "Bureau Startup", npc: "Arjun",
     vocab: ["J'ai de l'expérience en… (I have experience in…)", "Un de mes points forts… (One of my strengths…)", "Je suis passionné(e) par… (I'm passionate about…)", "les prochaines étapes (the next steps)"],
     nodes: {
       hello: { npc: "Bonjour {name}, merci d'être venu. Pour commencer, parlez-moi un peu de vous.", en: "Hello {name}, thanks for coming. To start, tell me a little about yourself.", tip: "Answer in your own words. Anything works!",
@@ -209,10 +209,10 @@ export default {
     },
   },
   party: {
-    name: "Soirée sur le Toit", npc: "Léa",
+    name: "Soirée sur le Toit", npc: "Mei",
     vocab: ["Tu connais… d'où ? (Where do you know… from?)", "Tu fais quoi dans la vie ? (What do you do?)", "Sans blague ! (No way!)", "On devrait se voir. (We should meet up.)"],
     nodes: {
-      hello: { npc: "Salut ! Je crois qu'on ne se connaît pas. Moi, c'est Léa.", en: "Hi! I don't think we've met. I'm Léa.",
+      hello: { npc: "Salut ! Je crois qu'on ne se connaît pas. Moi, c'est Mei.", en: "Hi! I don't think we've met. I'm Mei.",
         r: [["Enchanté, moi c'est {name}.", "Nice to meet you, I'm {name}.", ["enchant", "moi c est", "je m appelle", "salut", "bonjour"]]] },
       host: { npc: "Tu connais Sam d'où ?", en: "Where do you know Sam from?",
         r: [["On travaille ensemble. Et toi ?", "We work together. And you?", ["travaill", "ensemble", "collegue"]],

@@ -1,7 +1,7 @@
-import { getScenes, LANGS } from "./content.js";
-import { bestReply, pronunciation } from "./match.js";
+import { getScenes, LANGS, DISTRICTS, VIDEOS } from "./content.js";
+import { bestReply, pronunciation, normalize } from "./match.js";
 import { speak, stopSpeaking, listen, canListen, canSpeak, voicesFor } from "./speech.js";
-import { building, flag } from "./art.js";
+import { flag } from "./art.js";
 
 // ---------- state ----------
 
@@ -274,21 +274,49 @@ function city() {
   rollDay();
   const list = scenes();
   const p = prog();
+  const T = L();
   const goalPct = state.todayXp / state.dailyGoal;
-  const next = list.find((s) => s.unlock > p.xp);
   const cont = list.find((s) => s.unlock <= p.xp && !p.completed[s.id]) || list.filter((s) => s.unlock <= p.xp).pop();
+  const district = [...DISTRICTS].reverse().find((d) => p.xp >= d.xp);
+  const nextD = DISTRICTS.find((d) => d.xp > p.xp);
+  const prevXp = district.xp;
+  const dPct = nextD ? (p.xp - prevXp) / (nextD.xp - prevXp) : 1;
+  const stamps = list.filter((s) => p.completed[s.id]).length;
   app.innerHTML = `
   <header class="topbar">
-    <button class="lang-chip" id="lang" aria-label="Change language">${flag(state.lang)}<span>${L().native}</span><i>▾</i></button>
-    <div class="stat" title="Day streak"><span class="flame">🔥</span><b>${state.streak}</b></div>
+    <button class="lang-chip" id="lang" aria-label="Change language">${flag(state.lang)}<span>${T.native}</span><i>▾</i></button>
+    <div class="stat" title="Day streak"><span class="flame">🔥</span><b>${state.streak}</b><small>${state.streak === 1 ? "day" : "days"}</small></div>
     <div class="stat" title="Coins">🪙 <b>${state.coins}</b></div>
   </header>
   <main class="page">
+    <section class="citymap" style="--map:url(${pic("city-" + state.lang)})">
+      <img class="map-img" src="${pic("city-" + state.lang)}" alt="Illustrated map of ${esc(T.city)}" />
+      <div class="map-top">
+        <div><p class="eyebrow">Your city</p><h2>${esc(T.city)}</h2></div>
+        <div class="lvl-badge"><small>LVL</small><b>${levelFromXp(p.xp)}</b></div>
+      </div>
+      ${list
+        .map((s) => {
+          const locked = s.unlock > p.xp;
+          const done = p.completed[s.id];
+          return `<button class="pin ${locked ? "locked" : ""} ${done ? "done" : ""} ${cont?.id === s.id ? "next" : ""}" style="left:${s.pos.x}%;top:${s.pos.y}%;--c:${s.color}"
+            ${locked ? `data-locked="${s.unlock}"` : `data-go="scene" data-arg="${s.id}"`} aria-label="${esc(s.name)}${locked ? ", locked" : done ? ", completed" : ""}">
+            <span class="pin-face">${locked ? `<i>🔒</i>` : `<img src="${pic(s.id, true)}" alt="" />`}${done ? `<em>✓</em>` : ""}</span>
+            <span class="pin-label">${s.emoji} ${esc(s.name)}</span>
+          </button>`;
+        })
+        .join("")}
+      <div class="map-bottom">
+        <div class="row-between"><span>${nextD ? `Next district: <b>${nextD.name}</b>` : `<b>All districts open</b>`}</span><span>${nextD ? `${p.xp}/${nextD.xp} XP` : "🏆"}</span></div>
+        <div class="progress slim"><i style="width:${Math.min(100, dPct * 100)}%"></i></div>
+      </div>
+    </section>
+
     <section class="hello-card">
       <div>
-        <p class="eyebrow">Level ${levelFromXp(p.xp)} · ${p.xp} XP</p>
-        <h2>Hey ${esc(state.name)}!</h2>
-        <p class="small">${goalPct >= 1 ? "🎉 Daily goal smashed. Keep going!" : `${Math.max(0, state.dailyGoal - state.todayXp)} XP to today's goal`}</p>
+        <p class="eyebrow">Hey ${esc(state.name)} 👋</p>
+        <h2>${goalPct >= 1 ? "Goal smashed!" : "Today's goal"}</h2>
+        <p class="small">${goalPct >= 1 ? "Keep going for bonus coins." : `${Math.max(0, state.dailyGoal - state.todayXp)} XP to go · ${stamps}/9 stamps in ${esc(T.city)}`}</p>
       </div>
       <div class="goal-ring">${ring(goalPct, 70, 8)}<span>${Math.min(100, Math.round(goalPct * 100))}%</span></div>
     </section>
@@ -299,56 +327,42 @@ function city() {
         <div class="continue-art"><img src="${pic(cont.id)}" alt="" /><span class="continue-tag">${cont.emoji} ${esc(cont.npc.name)} is waiting</span></div>
         <div class="continue-body">
           <p class="eyebrow">${p.completed[cont.id] ? "Practise again" : "Up next"} · ${cont.level}</p>
-          <h3>${cont.emoji} ${esc(cont.name)}</h3>
+          <h3>${esc(cont.name)}</h3>
           <p class="small">${esc(cont.goal)}</p>
-          <span class="btn primary">Talk to ${esc(cont.npc.name)} →</span>
+          <span class="btn primary">Start talking →</span>
         </div>
       </button>`
         : ""
     }
 
-    <h3 class="section-title">Your city</h3>
-    <div class="map" role="list">
-      <svg class="map-ground" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        <path class="river" d="M78 -5 C 96 8, 86 20, 105 30 L105 -5 Z"/>
-        <rect class="park" x="38" y="1" width="24" height="7" rx="3"/>
-        <path class="road" d="M0 38.5 H100 M0 71.5 H100 M33.5 0 V100 M66.5 0 V100"/>
-        <path class="dash" d="M0 38.5 H100 M0 71.5 H100 M33.5 0 V100 M66.5 0 V100"/>
-      </svg>
-      ${[[4, 4], [28, 4], [40, 5], [60, 5], [4, 33], [96, 64], [4, 66], [28, 97], [72, 97], [96, 97]].map(([x, y]) => `<span class="tree" style="left:${x}%;top:${y}%"></span>`).join("")}
-      <span class="car car1"></span><span class="car car2"></span>
+    <h3 class="section-title">Passport · ${esc(T.city)}</h3>
+    <div class="passport">
       ${list
         .map((s) => {
-          const locked = s.unlock > p.xp;
           const done = p.completed[s.id];
-          return `
-        <button class="place ${locked ? "locked" : ""} ${cont?.id === s.id ? "next" : ""}" role="listitem" style="left:${s.pos.x}%;top:${s.pos.y}%;--c:${s.color}"
-          ${locked ? `data-locked="${s.unlock}"` : `data-go="scene" data-arg="${s.id}"`} aria-label="${esc(s.name)}${locked ? ", locked" : ""}">
-          ${cont?.id === s.id ? `<span class="you"><img src="${pic(s.id, true)}" alt="" /></span>` : ""}
-          ${building(s.id, s.color, locked)}
-          <span class="label">${locked ? "🔒 " : s.emoji + " "}${esc(s.name)}</span>
-          ${done ? `<span class="stars">${"★".repeat(done.stars)}<i>${"★".repeat(3 - done.stars)}</i></span>` : ""}
-        </button>`;
+          return `<div class="pstamp ${done ? "got" : ""}" style="--c:${s.color}" title="${esc(s.name)}"><span>${done ? s.emoji : "?"}</span><small>${done ? esc(s.name) : "Locked"}</small></div>`;
         })
         .join("")}
     </div>
-    ${next ? `<p class="small center">Next unlock: ${next.emoji} <b>${esc(next.name)}</b> at ${next.unlock} XP</p>` : `<p class="small center">🏆 You've unlocked the whole city!</p>`}
 
-    <h3 class="section-title">All places</h3>
-    <div class="place-cards">
-      ${list
-        .map((s) => {
-          const locked = s.unlock > p.xp;
-          const done = p.completed[s.id];
-          return `
-        <button class="pcard ${locked ? "locked" : ""}" style="--c:${s.color}" ${locked ? `data-locked="${s.unlock}"` : `data-go="scene" data-arg="${s.id}"`}>
-          <div class="pcard-art"><img src="${pic(s.id, true)}" alt="" loading="lazy" />${locked ? `<div class="lock">🔒<small>${s.unlock} XP</small></div>` : ""}</div>
-          <div class="pcard-body"><b>${esc(s.name)}</b><small>${esc(s.npc.name)} · ${esc(s.npc.role)}</small>
-          <span class="pcard-meta"><em class="lvl lvl-${s.level}">${s.level}</em>${done ? `<span class="stars">${"★".repeat(done.stars)}<i>${"★".repeat(3 - done.stars)}</i></span>` : ""}</span></div>
-        </button>`;
-        })
-        .join("")}
-    </div>
+    ${DISTRICTS.map((d, i) => {
+      const items = list.filter((s) => s.unlock >= d.xp && (i === DISTRICTS.length - 1 || s.unlock < DISTRICTS[i + 1].xp));
+      return `<h3 class="section-title">${d.name} ${p.xp < d.xp ? `<span class="lock-note">🔒 ${d.xp} XP</span>` : ""}</h3>
+      <div class="place-cards">
+        ${items
+          .map((s) => {
+            const locked = s.unlock > p.xp;
+            const done = p.completed[s.id];
+            return `
+          <button class="pcard ${locked ? "locked" : ""}" style="--c:${s.color}" ${locked ? `data-locked="${s.unlock}"` : `data-go="scene" data-arg="${s.id}"`}>
+            <div class="pcard-art"><img src="${pic(s.id, true)}" alt="" loading="lazy" />${locked ? `<div class="lock">🔒<small>${s.unlock} XP</small></div>` : ""}</div>
+            <div class="pcard-body"><b>${esc(s.name)}</b><small>${esc(s.npc.name)} · ${esc(s.npc.role)}</small>
+            <span class="pcard-meta"><em class="lvl lvl-${s.level}">${s.level}</em>${done ? `<span class="stars">${"★".repeat(done.stars)}<i>${"★".repeat(3 - done.stars)}</i></span>` : ""}</span></div>
+          </button>`;
+          })
+          .join("")}
+      </div>`;
+    }).join("")}
   </main>
   ${nav("city")}`;
   $("#lang").onclick = () => langSheet(() => go("city"));
@@ -370,28 +384,42 @@ function scene(id) {
   if (!s) return go("city");
   const lang = state.lang;
   const isEn = lang === "en";
+  const T = L();
   let nodeId = s.start;
-  let earned = 0, turns = 0, hintsUsed = 0, misses = 0;
+  let earned = 0, turns = 0, hintsUsed = 0, misses = 0, totalMisses = 0, hintIdx = -1;
+  let keyboard = !canListen;
   const accuracies = [];
+  const log = []; // transcript: { who, text, en }
+  const wins = [], struggles = [];
+  const chosen = new Set(); // replies the learner used
+  const ownWords = []; // answers phrased differently from the suggestions
+  const visited = new Set([s.start]);
   let listening = null;
   let alive = true;
+  let firstFold;
+  let currentLine = "";
   cleanup = () => {
     alive = false;
     listening?.stop();
+    document.querySelector(".sheet-wrap")?.remove();
   };
-  let firstFold;
 
-  const visited = new Set([s.start]);
+  const media = VIDEOS.has(s.id)
+    ? `<video src="vid/${s.id}.mp4" poster="${pic(s.id)}" autoplay muted loop playsinline></video>`
+    : `<img src="${pic(s.id)}" alt="${esc(s.npc.name)}, ${esc(s.npc.role)}, at ${esc(s.name)}" />`;
+
   app.innerHTML = `
   <div class="convo" id="stage" style="--c:${s.color}">
-    <div class="scene-photo"><img src="${pic(s.id)}" alt="${esc(s.npc.name)}, ${esc(s.npc.role)}, at ${esc(s.name)}" /></div>
+    <div class="scene-photo">${media}</div>
     <div class="scene-shade"></div>
     <header class="scenebar">
-      <button class="glass-btn" data-go="city" aria-label="Back to city">✕</button>
+      <button class="glass-btn" data-go="city" aria-label="Leave conversation">✕</button>
       <button class="mission-pill" id="missionToggle" aria-expanded="true" aria-controls="mission">
-        <span>🎯 Your mission</span><b id="missionCount">0/${s.objectives.length}</b>
+        <span>Your mission</span><b id="missionCount">0/${s.objectives.length}</b>
       </button>
-      <div class="xp-chip">⚡<b id="earned">0</b></div>
+      ${isEn ? "" : `<button class="glass-btn ${state.hideTr ? "" : "on"}" id="cc" aria-label="Show translations" aria-pressed="${!state.hideTr}">CC</button>`}
+      ${canListen ? `<button class="glass-btn" id="kb" aria-label="Type instead" aria-pressed="false">⌨︎</button>` : ""}
+      <button class="glass-btn" id="log" aria-label="Show transcript">☰</button>
     </header>
     <section class="mission" id="mission">
       <p class="mission-place">${s.emoji} ${esc(s.name).toUpperCase()}</p>
@@ -400,73 +428,91 @@ function scene(id) {
     </section>
     <div class="scene-spacer"></div>
     <div class="nameplate"><span class="np-dot"></span><b>${esc(s.npc.name)}</b><small>${esc(s.npc.role)}</small><span class="bars"><i></i><i></i><i></i><i></i></span></div>
-    <main class="chat" id="chat" aria-live="polite"></main>
-    <footer class="composer" id="composer">
-      <div class="hints" id="hints"></div>
-      <div class="live" id="live"></div>
-      <div class="controls">
-        <form id="typeform" class="typeform">
-          <input id="typed" placeholder="${canListen ? "Type instead…" : "Type your reply…"}" autocomplete="off" enterkeyhint="send" lang="${lang}" />
-          <button class="send" aria-label="Send">➤</button>
-        </form>
-        ${canListen ? `<button id="mic" class="mic" aria-label="Tap to speak"><svg viewBox="0 0 24 24" width="28" height="28"><path d="M12 2a3 3 0 013 3v6a3 3 0 01-6 0V5a3 3 0 013-3zM5 11a7 7 0 0014 0M12 18v4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>` : ""}
-      </div>
+    <section class="caption" id="caption" aria-live="polite">
+      <div class="dots"><i></i><i></i><i></i></div>
+    </section>
+    <section class="turn" id="turn" aria-live="polite"></section>
+    <footer class="actions" id="actions">
+      <button class="act" id="explain"><span class="act-ico">?</span><small>Explain</small></button>
+      ${canListen ? `<button class="mic" id="mic" aria-label="Tap to speak"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M12 2a3 3 0 013 3v6a3 3 0 01-6 0V5a3 3 0 013-3zM5 11a7 7 0 0014 0M12 18v4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>` : `<span class="mic-spacer"></span>`}
+      <button class="act" id="hint"><span class="act-ico">💡</span><small>Hint</small></button>
     </footer>
+    <div class="xp-float" id="xpTotal">⚡ <b id="earned">0</b> XP</div>
   </div>`;
 
-  const chat = $("#chat");
   const stage = $("#stage");
-  const hintsEl = $("#hints");
-  const live = $("#live");
+  const caption = $("#caption");
+  const turn = $("#turn");
   const mic = $("#mic");
+  const missionEl = $("#mission");
   const npcVoice = { seed: s.npc.name, pitch: s.npc.pitch, rate: s.npc.rate };
 
-  const missionEl = $("#mission");
+  // ----- mission checklist -----
   $("#missionToggle").onclick = () => {
     const open = missionEl.classList.toggle("collapsed") === false;
     $("#missionToggle").setAttribute("aria-expanded", open);
   };
-
-  function renderObjectives(fresh) {
-    let done = 0;
+  const doneObjectives = () => s.objectives.filter((o) => o.reach.some((r) => visited.has(r)));
+  function renderObjectives(fresh = []) {
+    const done = doneObjectives();
     $("#objectives").innerHTML = s.objectives
-      .map((o) => {
-        const ok = o.reach.some((r) => visited.has(r));
-        if (ok) done++;
-        return `<li class="${ok ? "done" : ""} ${ok && fresh?.includes(o) ? "just" : ""}"><i></i>${esc(o.label)}</li>`;
-      })
+      .map((o) => `<li class="${done.includes(o) ? "done" : ""} ${fresh.includes(o) ? "just" : ""}"><i></i>${esc(o.label)}</li>`)
       .join("");
-    $("#missionCount").textContent = `${done}/${s.objectives.length}`;
-    $("#prog").style.width = (done / s.objectives.length) * 100 + "%";
+    $("#missionCount").textContent = `${done.length}/${s.objectives.length}`;
+    $("#prog").style.width = (done.length / s.objectives.length) * 100 + "%";
   }
   renderObjectives();
   firstFold = setTimeout(() => alive && missionEl.classList.add("collapsed"), 4500);
-
   function reach(id) {
-    const before = s.objectives.filter((o) => o.reach.some((r) => visited.has(r)));
+    const before = doneObjectives();
     visited.add(id);
-    const fresh = s.objectives.filter((o) => !before.includes(o) && o.reach.some((r) => visited.has(r)));
+    const fresh = doneObjectives().filter((o) => !before.includes(o));
     renderObjectives(fresh);
     if (fresh.length) {
       clearTimeout(firstFold);
       missionEl.classList.remove("collapsed");
       clearTimeout(reach.t);
       reach.t = setTimeout(() => alive && missionEl.classList.add("collapsed"), 2200);
-      toast("✅ " + fresh.map((o) => o.label).join(" · "));
     }
   }
+  const nextObjective = () => s.objectives.find((o) => !o.reach.some((r) => visited.has(r)));
 
+  // ----- header buttons -----
+  $("#cc")?.addEventListener("click", (e) => {
+    state.hideTr = !state.hideTr;
+    save();
+    e.currentTarget.classList.toggle("on", !state.hideTr);
+    e.currentTarget.setAttribute("aria-pressed", !state.hideTr);
+    stage.classList.toggle("no-tr", state.hideTr);
+  });
+  stage.classList.toggle("no-tr", state.hideTr);
+  $("#kb")?.addEventListener("click", (e) => {
+    keyboard = !keyboard;
+    e.currentTarget.classList.toggle("on", keyboard);
+    e.currentTarget.setAttribute("aria-pressed", keyboard);
+    listening?.stop();
+    renderTurn("idle");
+  });
+  $("#log").onclick = () =>
+    openSheet(
+      "Transcript",
+      log.length
+        ? `<div class="transcript">${log
+            .map((l) => `<div class="t-row ${l.who}"><b>${l.who === "me" ? "You" : esc(s.npc.name)}</b><p lang="${lang}">${esc(l.text)}</p>${l.en && !isEn ? `<small>${esc(l.en)}</small>` : ""}</div>`)
+            .join("")}</div>`
+        : `<p class="small">Nothing said yet.</p>`
+    );
+
+  // ----- character reactions -----
   function react(emoji, mood) {
     const r = document.createElement("div");
     r.className = "reaction";
     r.textContent = emoji;
     stage.append(r);
     setTimeout(() => r.remove(), 1300);
-    if (mood) {
-      stage.classList.remove("happy", "confused");
-      void stage.offsetWidth;
-      stage.classList.add(mood);
-    }
+    stage.classList.remove("happy", "confused");
+    void stage.offsetWidth;
+    if (mood) stage.classList.add(mood);
   }
 
   async function talk(text, opts) {
@@ -476,236 +522,320 @@ function scene(id) {
     stage.classList.remove("talking");
   }
 
-  function bubble(who, html) {
-    const div = document.createElement("div");
-    div.className = `msg ${who}`;
-    div.innerHTML = html;
-    chat.append(div);
-    scrollChat();
-    return div;
-  }
-
-  function scrollChat() {
-    requestAnimationFrame(() => chat.scrollTo({ top: chat.scrollHeight, behavior: "smooth" }));
-  }
-
+  // ----- the character's line, shown as a subtitle -----
   async function npcSay(text, en, tip) {
-    const typing = bubble("npc typing", `<div class="dots"><i></i><i></i><i></i></div>`);
-    await wait(500);
-    typing.remove();
+    caption.innerHTML = `<div class="dots"><i></i><i></i><i></i></div>`;
+    turn.innerHTML = "";
+    await wait(450);
     if (!alive) return;
     const line = fill(text);
-    const b = bubble(
-      "npc",
-      `<div class="bub">
-        <p lang="${lang}">${esc(line)}</p>
-        ${!isEn && en ? `<p class="tr ${state.hideTr ? "" : "show"}">${esc(fill(en))}</p>` : ""}
-        <div class="msg-tools">
-          <button class="chip" data-act="replay" aria-label="Replay">🔊</button>
-          <button class="chip" data-act="slow" aria-label="Slow">🐢</button>
-          ${!isEn && en ? `<button class="chip" data-act="tr">🌐</button>` : ""}
-        </div>
-        ${tip ? `<p class="tip">💡 ${esc(tip)}</p>` : ""}
-      </div>`
-    );
-    b.querySelector('[data-act="replay"]').onclick = () => talk(line);
-    b.querySelector('[data-act="slow"]').onclick = () => talk(line, { speed: 0.65 });
-    b.querySelector('[data-act="tr"]')?.addEventListener("click", () => b.querySelector(".tr").classList.toggle("show"));
+    currentLine = line;
+    log.push({ who: "npc", text: line, en: en ? fill(en) : "" });
+    caption.innerHTML = `
+      <p class="line" lang="${lang}">${esc(line)}</p>
+      ${!isEn && en ? `<p class="tr">${esc(fill(en))}</p>` : ""}
+      <div class="cap-tools">
+        <button class="chip" id="replay" aria-label="Hear again">🔊</button>
+        <button class="chip" id="slow" aria-label="Hear slowly">🐢</button>
+        <button class="chip again" id="again">${esc(T.again)}</button>
+      </div>
+      ${tip ? `<p class="tip">💡 ${esc(tip)}</p>` : ""}`;
+    caption.classList.remove("in");
+    void caption.offsetWidth;
+    caption.classList.add("in");
+    $("#replay").onclick = () => talk(line);
+    $("#slow").onclick = () => talk(line, { speed: 0.65 });
+    $("#again").onclick = () => askAgain(false);
     await talk(line);
   }
 
-  function renderHints(node, reveal = false) {
-    if (!reveal) {
-      hintsEl.innerHTML = `<button class="ideas-btn" id="reveal">💡 Need ideas? <span>Show ${node.replies.length}</span></button>`;
-      $("#reveal").onclick = () => {
-        hintsUsed++;
-        renderHints(node, true);
-      };
-      return;
+  // The learner asks the character to repeat: costs nothing, and is real practice.
+  async function askAgain(spoken) {
+    listening?.stop();
+    if (!spoken) {
+      log.push({ who: "me", text: T.again, en: T.againEn });
+      say(T.again, { pitch: 1 });
+      await wait(900);
     }
-    hintsEl.innerHTML =
-      `<p class="hint-label">${reveal ? "You could say…" : "Need ideas?"}</p>` +
-      node.replies
-        .map(
-          (r, i) => `
-        <div class="hint ${reveal ? "" : "blur"}" data-i="${i}" role="button" tabindex="0">
-          <span><b lang="${lang}">${esc(fill(r.say))}</b>${!isEn && r.en ? `<small>${esc(fill(r.en))}</small>` : ""}</span>
-          <button class="chip" data-act="hear" aria-label="Hear it">🔊</button>
-          <button class="chip" data-act="star" aria-label="Save phrase">☆</button>
-        </div>`
-        )
-        .join("") +
-      (reveal ? "" : `<button class="chip reveal" id="reveal">💡 Show ideas</button>`);
-    $("#reveal")?.addEventListener("click", () => {
-      hintsUsed++;
-      renderHints(node, true);
-    });
-    hintsEl.querySelectorAll(".hint").forEach((h) => {
-      const r = node.replies[h.dataset.i];
-      h.querySelector('[data-act="hear"]').onclick = (e) => {
-        e.stopPropagation();
-        say(fill(r.say));
-      };
-      h.querySelector('[data-act="star"]').onclick = (e) => {
-        e.stopPropagation();
-        savePhrase(r.say, r.en, s.name);
-      };
-      h.onclick = () => {
-        if (h.classList.contains("blur")) {
-          hintsUsed++;
-          return renderHints(node, true);
-        }
-        $("#typed").value = fill(r.say);
-        $("#typed").focus();
-      };
-    });
+    react("👂");
+    await talk(currentLine, { speed: 0.7 });
+    if (alive) renderTurn("idle");
   }
 
-  async function showNode() {
+  // ----- the learner's turn card -----
+  function renderTurn(mode, data = {}) {
     const node = s.nodes[nodeId];
-    hintsEl.innerHTML = "";
-    await npcSay(node.npc, node.en, node.tip);
-    if (!alive) return;
-    if (node.end) return finish();
-    misses = 0;
-    renderHints(node, prog().xp < 60 && turns === 0);
-    if (canListen && state.autoListen) startListening();
+    if (!node || node.end) return;
+    const obj = nextObjective();
+    if (mode === "idle" && hintIdx >= 0) mode = "hint";
+    let html = "";
+    if (mode === "idle") {
+      html = `<p class="turn-label">Your turn</p>
+        <p class="turn-main">${obj ? "🎯 " + esc(obj.label) : "Answer " + esc(s.npc.name)}</p>
+        <p class="turn-sub">${keyboard ? "Type your answer below." : `Tap the mic and answer in ${T.native}. Stuck? Tap Hint.`}</p>`;
+    } else if (mode === "hint") {
+      const r = node.replies[hintIdx % node.replies.length];
+      html = `<p class="turn-label">Say this <span>${(hintIdx % node.replies.length) + 1}/${node.replies.length}</span></p>
+        <p class="turn-main say" lang="${lang}">${esc(fill(r.say))}</p>
+        ${!isEn && r.en ? `<p class="turn-sub tr">${esc(fill(r.en))}</p>` : ""}
+        <div class="cap-tools"><button class="chip" id="hearHint">🔊 Hear it</button><button class="chip" id="saveHint">☆ Save</button></div>`;
+    } else if (mode === "listening") {
+      html = `<p class="turn-label live-label"><span class="wave"><i></i><i></i><i></i><i></i><i></i></span> Listening…</p>
+        <p class="turn-main heard" id="heard" lang="${lang}">${esc(data.text || "")}</p>
+        <p class="turn-sub">Speak in ${T.native}, then pause.</p>`;
+    } else if (mode === "result") {
+      html = `<p class="turn-label ok">You said ${data.badge || ""}</p>
+        <p class="turn-main heard" lang="${lang}">${data.html}</p>`;
+    } else if (mode === "miss") {
+      html = `<p class="turn-label bad">Not quite</p>
+        <p class="turn-main heard" lang="${lang}">${esc(data.text)}</p>
+        <p class="turn-sub">${esc(s.npc.name)} didn't understand. Try saying it another way, or tap Hint.</p>`;
+    }
+    if (keyboard && mode !== "listening" && mode !== "result") {
+      html += `<form class="typeform" id="typeform"><input id="typed" placeholder="Type in ${T.native}…" autocomplete="off" enterkeyhint="send" lang="${lang}" /><button class="send" aria-label="Send">➤</button></form>`;
+    }
+    turn.innerHTML = html;
+    turn.className = "turn t-" + mode;
+    $("#hearHint")?.addEventListener("click", () => say(fill(node.replies[hintIdx % node.replies.length].say)));
+    $("#saveHint")?.addEventListener("click", () => {
+      const r = node.replies[hintIdx % node.replies.length];
+      savePhrase(r.say, r.en, s.name);
+    });
+    const tf = $("#typeform");
+    if (tf) {
+      tf.onsubmit = (e) => {
+        e.preventDefault();
+        const v = $("#typed").value;
+        if (v.trim()) handle(v);
+      };
+    }
   }
 
-  async function handle(text, confidence) {
-    if (!text.trim()) return;
+  // ----- buttons -----
+  $("#hint").onclick = () => {
     const node = s.nodes[nodeId];
-    if (node.end) return;
-    const hit = bestReply(text, node.replies, state.name);
-    const me = bubble("me", `<p lang="${lang}">${esc(text)}</p>`);
+    if (!node || node.end || !node.replies?.length) return;
+    hintIdx++;
+    hintsUsed++;
+    listening?.stop();
+    renderTurn("hint");
+    say(fill(node.replies[hintIdx % node.replies.length].say), { speed: 0.9 });
+  };
 
-    let nextId = null;
-    let xp = 0;
-    if (hit) {
-      const p = pronunciation(fill(hit.reply.say), text);
-      if (p.accuracy >= 70) {
-        accuracies.push(p.accuracy);
-        me.insertAdjacentHTML(
-          "beforeend",
-          `<div class="score ${p.accuracy >= 85 ? "great" : "ok"}">
-            <b>${p.accuracy}%</b> ${p.parts.map((x) => `<span class="${x.ok ? "" : "miss"}">${esc(x.word)}</span>`).join(" ")}
-          </div>`
-        );
-      } else {
-        me.insertAdjacentHTML("beforeend", `<div class="score great">✓ Said it your own way! <b>+5</b></div>`);
-        xp += 5;
-      }
-      xp += hit.reply.xp || 10;
-      nextId = hit.reply.next;
-    } else if (node.any && text.trim().split(/\s+/).length >= 3) {
-      me.insertAdjacentHTML("beforeend", `<div class="score great">✓ Great answer! <b>+15</b></div>`);
-      xp += 15;
-      nextId = node.any;
-    }
-
-    scrollChat();
-    if (nextId) {
-      if (confidence && confidence > 0.85) xp += 2;
-      earned += xp;
-      turns++;
-      addXp(xp);
-      $("#earned").textContent = earned;
-      floatXp(me, xp);
-      react(["👍", "😄", "👌", "✨"][turns % 4], "happy");
-      nodeId = nextId;
-      reach(nextId);
-      await wait(500);
-      if (alive) showNode();
-    } else {
-      misses++;
-      react("🤔", "confused");
-      const [line, en] = RETRY[lang][Math.min(misses, 2) - 1];
-      await npcSay(line, en);
-      if (misses >= 2) renderHints(node, true);
-      if (alive && canListen && state.autoListen) startListening();
-    }
-  }
-
-  function floatXp(el, xp) {
-    const f = document.createElement("span");
-    f.className = "float-xp";
-    f.textContent = `+${xp} XP`;
-    el.append(f);
-    setTimeout(() => f.remove(), 1200);
-  }
+  $("#explain").onclick = () => {
+    const node = s.nodes[nodeId];
+    const last = [...log].reverse().find((l) => l.who === "npc");
+    openSheet(
+      "What's going on?",
+      `<div class="explain">
+        ${last ? `<div class="ex-block"><p class="eyebrow">${esc(s.npc.name)} said</p><p class="ex-line" lang="${lang}">${esc(last.text)}</p>${last.en ? `<p class="small">${esc(last.en)}</p>` : ""}</div>` : ""}
+        ${node?.tip ? `<div class="ex-block tip-block">💡 ${esc(node.tip)}</div>` : ""}
+        <div class="ex-block"><p class="eyebrow">Your goal</p><p>🎯 ${esc(nextObjective()?.label || s.goal)}</p></div>
+        <div class="ex-block"><p class="eyebrow">Handy phrases here</p>${s.vocab.map((v) => `<p class="ex-vocab">${esc(v)}</p>`).join("")}</div>
+        <p class="small center">Explain is free. It doesn't count as a hint.</p>
+      </div>`
+    );
+  };
 
   function startListening() {
-    if (!mic || listening) return;
+    if (!mic || listening || keyboard) return;
     stopSpeaking();
     mic.classList.add("on");
-    live.innerHTML = `<span class="wave"><i></i><i></i><i></i><i></i><i></i></span> Listening in ${L().native}…`;
-    listening = listen({ lang: L().speech, onInterim: (t) => t && (live.textContent = t) });
+    renderTurn("listening");
+    listening = listen({ lang: T.speech, onInterim: (t) => t && $("#heard") && ($("#heard").textContent = t) });
     listening.promise
       .then(({ text, confidence }) => {
-        live.textContent = "";
-        if (alive && text) handle(text, confidence);
+        if (!alive) return;
+        if (text) handle(text, confidence);
+        else renderTurn("idle");
       })
       .catch((err) => {
-        live.textContent = "";
+        if (!alive) return;
         if (err.message === "not-allowed" || err.message === "service-not-allowed") {
           state.autoListen = false;
+          keyboard = true;
           save();
-          toast("Microphone blocked. You can type instead.");
+          toast("Microphone blocked, so you can type instead.");
         }
+        renderTurn("idle");
       })
       .finally(() => {
         listening = null;
         mic?.classList.remove("on");
       });
   }
-
   mic?.addEventListener("click", () => (listening ? listening.stop() : startListening()));
 
-  $("#typeform").onsubmit = (e) => {
-    e.preventDefault();
-    const v = $("#typed").value;
-    $("#typed").value = "";
-    listening?.stop();
-    handle(v);
-  };
+  // ----- understanding the learner -----
+  async function handle(text, confidence) {
+    const node = s.nodes[nodeId];
+    if (!node || node.end) return;
+    const hit = bestReply(text, node.replies, state.name);
 
+    if (!hit && !node.any && T.repeat.some((w) => normalize(text).split(" ").includes(normalize(w)) || normalize(text).includes(normalize(w) + " "))) {
+      log.push({ who: "me", text, en: "" });
+      return askAgain(true);
+    }
+
+    let nextId = null, xp = 0, badge = "", html = esc(text);
+    if (hit) {
+      chosen.add(hit.reply);
+      const target = fill(hit.reply.say);
+      const p = pronunciation(target, text);
+      if (p.accuracy >= 70) {
+        accuracies.push(p.accuracy);
+        html = p.parts.map((x) => `<span class="${x.ok ? "hit" : "miss"}">${esc(x.word)}</span>`).join(" ");
+        badge = `<b class="pct ${p.accuracy >= 85 ? "great" : "ok"}">${p.accuracy}%</b>`;
+        if (p.accuracy >= 90) wins.push(`You said “${target}” clearly (${p.accuracy}%).`);
+        else struggles.push({ say: target, why: `${p.accuracy}% match. Listen to it again and repeat.` });
+      } else {
+        badge = `<b class="pct great">✓ Your own words +5</b>`;
+        ownWords.push(text);
+        xp += 5;
+      }
+      xp += hit.reply.xp || 10;
+      nextId = hit.reply.next;
+    } else if (node.any && text.trim().split(/\s+/).length >= 3) {
+      badge = `<b class="pct great">✓ Great answer +15</b>`;
+      wins.push(`You gave a full answer of your own.`);
+      xp += 15;
+      nextId = node.any;
+    }
+    log.push({ who: "me", text, en: hit?.reply.en ? fill(hit.reply.en) : "" });
+
+    if (nextId) {
+      if (confidence && confidence > 0.85) xp += 2;
+      if (hintIdx >= 0 && hit) struggles.push({ say: fill(hit.reply.say), why: "You used a hint here. Try it from memory next time." });
+      earned += xp;
+      turns++;
+      hintIdx = -1;
+      misses = 0;
+      addXp(xp);
+      $("#earned").textContent = earned;
+      bump();
+      renderTurn("result", { html, badge });
+      react(["👍", "😄", "👌", "✨"][turns % 4], "happy");
+      nodeId = nextId;
+      reach(nextId);
+      await wait(1100);
+      if (alive) showNode();
+    } else {
+      misses++;
+      totalMisses++;
+      renderTurn("miss", { text });
+      react("🤔", "confused");
+      await wait(900);
+      const [line, en] = RETRY[lang][Math.min(misses, 2) - 1];
+      await npcSay(line, en);
+      if (!alive) return;
+      if (misses >= 2 && hintIdx < 0) {
+        hintIdx = 0;
+        hintsUsed++;
+      }
+      renderTurn("idle");
+      if (canListen && state.autoListen && !keyboard) startListening();
+    }
+  }
+
+  function bump() {
+    const x = $("#xpTotal");
+    x.classList.remove("bump");
+    void x.offsetWidth;
+    x.classList.add("bump");
+  }
+
+  async function showNode() {
+    const node = s.nodes[nodeId];
+    await npcSay(node.npc, node.en, node.tip);
+    if (!alive) return;
+    if (node.end) return finish();
+    if (prog().xp < 60 && turns === 0) hintIdx = 0;
+    renderTurn("idle");
+    if (canListen && state.autoListen && !keyboard) startListening();
+  }
+
+  // ----- end of scene report -----
   function finish() {
     const avg = accuracies.length ? Math.round(accuracies.reduce((a, b) => a + b, 0) / accuracies.length) : 100;
     let stars = 1;
     if (hintsUsed <= 2 && avg >= 60) stars = 2;
     if (hintsUsed === 0 && avg >= 80) stars = 3;
+    const score = Math.max(5, Math.min(20, Math.round((avg / 100) * 20 - hintsUsed * 1.5 - totalMisses)));
     const p = prog();
     const before = p.xp - earned;
     const prev = p.completed[s.id];
     const bonus = prev ? 10 : 30;
     addXp(bonus);
-    p.completed[s.id] = { stars: Math.max(stars, prev?.stars || 0), runs: (prev?.runs || 0) + 1 };
+    p.completed[s.id] = { stars: Math.max(stars, prev?.stars || 0), runs: (prev?.runs || 0) + 1, best: Math.max(score, prev?.best || 0), date: today() };
     save();
     const unlocked = scenes().filter((x) => x.unlock > before && x.unlock <= p.xp);
-    stage.classList.add("happy", "done");
-    missionEl.classList.remove("collapsed");
+    if (ownWords.length === 1) wins.unshift(`You answered in your own words: “${ownWords[0]}”.`);
+    if (ownWords.length > 1) wins.unshift(`You answered in your own words ${ownWords.length} times, like “${ownWords[0]}”.`);
+    if (hintsUsed === 0) wins.push("You finished without a single hint.");
+    if (totalMisses === 0 && turns > 2) wins.push(`${s.npc.name} understood you every time.`);
+    if (!wins.length) wins.push("You made it all the way through the conversation.");
+    // Suggest a reply they didn't use, so there's always something new to try.
+    const unused = [...visited].flatMap((v) => s.nodes[v].replies || []).filter((r) => !chosen.has(r));
+    const alt = unused[Math.floor(Math.random() * unused.length)];
+    const next = struggles.slice(0, 2);
+    if (alt && next.length < 3) next.push({ say: fill(alt.say), why: "Another way to answer. Try it next time." });
 
-    $("#composer").innerHTML = `
-      <div class="result">
-        <div class="big-stars">${[0, 1, 2].map((i) => `<span class="${i < stars ? "on" : ""}" style="animation-delay:${0.2 + i * 0.2}s">★</span>`).join("")}</div>
-        <h3>${["Nice work!", "Great job!", "Perfect!"][stars - 1]}</h3>
-        <div class="result-grid">
+    stage.classList.add("finished");
+    missionEl.classList.remove("collapsed");
+    $("#caption").innerHTML = "";
+    $("#turn").innerHTML = "";
+    $("#actions").innerHTML = "";
+    const rep = document.createElement("section");
+    rep.className = "report";
+    rep.innerHTML = `
+      <div class="report-card">
+        <div class="report-head">
+          <div class="score-tile"><b>${score}</b><small>/20</small></div>
+          <div>
+            <p class="eyebrow">Scene complete</p>
+            <h3>${["Nice work!", "Great job!", "Perfect!"][stars - 1]}</h3>
+            <div class="mini-stars">${[0, 1, 2].map((i) => `<span class="${i < stars ? "on" : ""}" style="animation-delay:${0.3 + i * 0.15}s">★</span>`).join("")}</div>
+          </div>
+          <div class="stamp" style="--c:${s.color}"><span>${s.emoji}</span><small>${esc(s.name)}</small><em>${new Date().toLocaleDateString(undefined, { day: "numeric", month: "short" })}</em></div>
+        </div>
+        <div class="report-stats">
           <div><b>+${earned + bonus}</b><small>XP</small></div>
-          <div><b>${avg}%</b><small>accuracy</small></div>
+          <div><b>${avg}%</b><small>clarity</small></div>
           <div><b>${hintsUsed}</b><small>hints</small></div>
         </div>
+        <div class="fb good"><p class="fb-title">✅ What went well</p>${wins.slice(0, 3).map((w) => `<p>${esc(w)}</p>`).join("")}</div>
+        ${next.length ? `<div class="fb next"><p class="fb-title">🎯 Try next time</p>${next
+          .map((n, i) => `<div class="fb-row"><div><p class="fb-say" lang="${lang}">${esc(n.say)}</p><small>${esc(n.why)}</small></div><button class="chip" data-hear="${i}">🔊</button><button class="chip" data-save="${i}">☆</button></div>`)
+          .join("")}</div>` : ""}
         ${unlocked.length ? `<p class="unlock">🔓 Unlocked: <b>${unlocked.map((u) => u.emoji + " " + esc(u.name)).join(", ")}</b></p>` : ""}
-        <div class="vocab"><b>Key phrases. Tap to save.</b>${s.vocab.map((v) => `<button class="chip" data-v="${esc(v)}">☆ ${esc(v)}</button>`).join("")}</div>
         <div class="result-actions">
           <button class="btn" data-go="scene" data-arg="${s.id}">↻ Again</button>
-          <button class="btn primary" data-go="city">Continue</button>
+          <button class="btn primary" data-go="city">Back to ${esc(T.city)}</button>
         </div>
       </div>`;
-    $("#composer").querySelectorAll("[data-v]").forEach((b) => (b.onclick = () => savePhrase(b.dataset.v, "", s.name)));
+    stage.append(rep);
+    rep.querySelectorAll("[data-hear]").forEach((b) => (b.onclick = () => say(next[b.dataset.hear].say)));
+    rep.querySelectorAll("[data-save]").forEach((b) => (b.onclick = () => savePhrase(next[b.dataset.save].say, "", s.name)));
     confetti();
   }
 
   showNode();
+}
+
+function openSheet(title, html) {
+  document.querySelector(".sheet-wrap")?.remove();
+  const wrap = document.createElement("div");
+  wrap.className = "sheet-wrap";
+  wrap.innerHTML = `<div class="sheet" role="dialog" aria-label="${esc(title)}"><div class="grab"></div><div class="sheet-head"><h3>${esc(title)}</h3><button class="icon-btn" aria-label="Close">✕</button></div><div class="sheet-body">${html}</div></div>`;
+  document.body.append(wrap);
+  requestAnimationFrame(() => wrap.classList.add("open"));
+  const close = () => {
+    wrap.classList.remove("open");
+    setTimeout(() => wrap.remove(), 250);
+  };
+  wrap.addEventListener("click", (e) => {
+    if (e.target === wrap || e.target.closest(".sheet-head .icon-btn")) close();
+  });
 }
 
 // ---------- phrasebook ----------

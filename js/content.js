@@ -3,12 +3,25 @@ import es from "./lang/es.js";
 import fr from "./lang/fr.js";
 
 export const LANGS = {
-  en: { id: "en", name: "English", native: "English", speech: "en-US", hello: "Hello!" },
-  es: { id: "es", name: "Spanish", native: "Español", speech: "es-ES", hello: "¡Hola!" },
-  fr: { id: "fr", name: "French", native: "Français", speech: "fr-FR", hello: "Bonjour !" },
+  en: { id: "en", name: "English", native: "English", speech: "en-US", hello: "Hello!", city: "Ashford Bay", again: "Sorry?", againEn: "",
+    repeat: ["sorry", "pardon", "repeat", "again", "what", "slower"] },
+  es: { id: "es", name: "Spanish", native: "Español", speech: "es-ES", hello: "¡Hola!", city: "Valdelsol", again: "¿Cómo?", againEn: "Sorry, what?",
+    repeat: ["como", "perdon", "perdona", "repite", "otra vez", "despacio", "que"] },
+  fr: { id: "fr", name: "French", native: "Français", speech: "fr-FR", hello: "Bonjour !", city: "Saint-Lumière", again: "Pardon ?", againEn: "Sorry?",
+    repeat: ["pardon", "comment", "repeter", "repetez", "encore", "lentement", "quoi"] },
 };
 
 const PACKS = { es, fr };
+
+// Neighbourhoods of each city, unlocked by XP.
+export const DISTRICTS = [
+  { name: "Old Town", xp: 0 },
+  { name: "Riverside", xp: 150 },
+  { name: "Uptown", xp: 420 },
+];
+
+// Characters with a looping video in vid/<id>.mp4. Others use their still portrait.
+export const VIDEOS = new Set([]);
 const cache = {};
 
 // Returns the 9 scenes in the requested language. English scenes define the

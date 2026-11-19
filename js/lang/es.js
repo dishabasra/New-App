@@ -190,7 +190,7 @@ export default {
     },
   },
   office: {
-    name: "Oficina Startup", npc: "Andrés",
+    name: "Oficina Startup", npc: "Arjun",
     vocab: ["Tengo experiencia en… (I have experience in…)", "Una de mis fortalezas es… (One of my strengths is…)", "Me apasiona… (I'm passionate about…)", "¿Cuáles son los siguientes pasos? (What are the next steps?)"],
     nodes: {
       hello: { npc: "Hola, {name}, gracias por venir. Empecemos: háblame un poco de ti.", en: "Hi {name}, thanks for coming. Let's start: tell me a bit about yourself.", tip: "Answer in your own words. Anything works!",
@@ -209,10 +209,10 @@ export default {
     },
   },
   party: {
-    name: "Fiesta en la Azotea", npc: "Vale",
+    name: "Fiesta en la Azotea", npc: "Mei",
     vocab: ["¿De qué conoces a…? (How do you know…?)", "¿A qué te dedicas? (What do you do?)", "¡No me digas! (No way!)", "Deberíamos quedar. (We should hang out.)"],
     nodes: {
-      hello: { npc: "¡Hola! Creo que no nos conocemos. Soy Vale.", en: "Hey! I don't think we've met. I'm Vale.",
+      hello: { npc: "¡Hola! Creo que no nos conocemos. Soy Mei.", en: "Hey! I don't think we've met. I'm Mei.",
         r: [["Encantado, yo soy {name}.", "Nice to meet you, I'm {name}.", ["encantad", "soy", "me llamo", "hola", "mucho gusto"]]] },
       host: { npc: "¿Y de qué conoces a Sam, el anfitrión?", en: "So how do you know Sam, the host?",
         r: [["Trabajamos juntos. ¿Y tú?", "We work together. And you?", ["trabaj", "junt", "companer"]],
