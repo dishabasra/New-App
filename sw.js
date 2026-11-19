@@ -1,5 +1,5 @@
 // Offline support: cache the app shell, serve it cache-first, refresh in the background.
-const CACHE = "talktown-v3";
+const CACHE = "talktown-v4";
 const ASSETS = [
   "./",
   "./index.html",

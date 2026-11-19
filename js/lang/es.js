@@ -59,7 +59,7 @@ export default {
     },
   },
   taxi: {
-    name: "Taxi Amarillo", npc: "Javier",
+    name: "Taxi Amarillo", npc: "Pilar",
     vocab: ["¿Me lleva a…? (Can you take me to…?)", "¿Cuánto tiempo se tarda? (How long does it take?)", "Puede dejarme aquí. (You can drop me here.)", "Quédese con el cambio. (Keep the change.)"],
     nodes: {
       hello: { npc: "¡Hola! ¿Adónde vamos?", en: "Hello! Where are we going?",

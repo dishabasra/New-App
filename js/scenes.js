@@ -164,7 +164,7 @@ export const SCENES = [
     unlock: 90,
     level: "Beginner",
     goal: "Tell the driver where to go and chat on the way.",
-    npc: { name: "Raj", avatar: "👳🏾‍♂️", role: "Taxi driver", pitch: 0.85, rate: 1.05 },
+    npc: { name: "Linda", avatar: "👩🏼‍🦳", role: "Taxi driver", pitch: 1.05, rate: 1.05 },
     vocab: ["Could you take me to…?", "How long will it take?", "You can drop me here.", "Keep the change."],
     start: "hello",
     nodes: {

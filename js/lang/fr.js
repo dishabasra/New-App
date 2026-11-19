@@ -59,7 +59,7 @@ export default {
     },
   },
   taxi: {
-    name: "Taxi Jaune", npc: "Karim",
+    name: "Taxi Jaune", npc: "Martine",
     vocab: ["Vous pouvez m'emmener à… ? (Can you take me to…?)", "Ça va prendre combien de temps ? (How long will it take?)", "Vous pouvez me déposer ici. (You can drop me here.)", "Gardez la monnaie. (Keep the change.)"],
     nodes: {
       hello: { npc: "Bonjour ! Je vous emmène où ?", en: "Hello! Where can I take you?",
